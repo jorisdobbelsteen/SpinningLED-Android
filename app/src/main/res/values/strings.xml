@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">SpinningLED</string>
+    <string name="discovery_in_progress">No device discovered (yet)...</string>
+    <string name="connect_button">Connect</string>
+    <string name="connect_to_device">Connect to SpinningLED Device</string>
+</resources>
