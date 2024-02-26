@@ -50,7 +50,7 @@ class SpinningLedDevice(
                 s.connect(InetSocketAddress(hostname, port))
                 Timber.d("Connected...")
 
-                async {
+                launch {
                     _connected.value = true
                     val buffer = ByteBuffer.allocate(8196).order(ByteOrder.LITTLE_ENDIAN)
                     try {
@@ -116,7 +116,7 @@ class SpinningLedDevice(
 
     suspend fun sendDummy(length: Int) {
         Timber.d("sendDummy(${length}) ")
-        assert(length in 0..MAX_PAYLOAD_LENGTH);
+        assert(length in 0..MAX_PAYLOAD_LENGTH)
 
         val buffer = ByteBuffer.allocate(length + 4).order(ByteOrder.LITTLE_ENDIAN)
         buffer.putShort(0u.toShort()) // type = DUMMY
@@ -136,10 +136,10 @@ class SpinningLedDevice(
         socket?.write(buffer)
 
         // Get actual values back...
-        sendDummy(DEFAULT_INFO_PAYLOAD_SIZE); // Get Info Packet...
+        sendDummy(DEFAULT_INFO_PAYLOAD_SIZE) // Get Info Packet...
     }
 
-    suspend fun sendRgb565Column(column: Int, pixels: ShortArray) {
+    suspend fun sendRgb565Column(column: Int, pixels: ShortArray) = withContext(coroutineScope.coroutineContext) {
         Timber.d("sendRgb565Column(${column}, ${pixels.size}px)")
         require(pixels.size <= MAX_PAYLOAD_LENGTH / 2)
 
@@ -152,10 +152,10 @@ class SpinningLedDevice(
         socket?.write(buffer)
     }
 
-    suspend fun sendRgb565Bitmap(bitmap: Bitmap) {
+    suspend fun sendRgb565Bitmap(bitmap: Bitmap) = withContext(coroutineScope.coroutineContext) {
         val size = _screenSize.value
         if (size.width == 0 || size.height == 0) {
-            return
+            return@withContext
         }
 
         // Assume same orientation in this algorithm
@@ -170,7 +170,7 @@ class SpinningLedDevice(
 
         // Can optimize with larger multi-column transfers...
         //val columnsAtOnce = MAX_PAYLOAD_LENGTH / size.height / 2
-        var pixels = ShortArray(size.height)
+        val pixels = ShortArray(size.height)
         for(column in 0..<size.width) {
             val x = (left + column * ratio).toInt()
             for(row in 0..<size.height) {
@@ -181,10 +181,6 @@ class SpinningLedDevice(
             }
             sendRgb565Column(column, pixels)
         }
-    }
-
-    suspend fun sendColumnData(column: Int, data: ByteArray) = withContext(coroutineScope.coroutineContext) {
-        // TODO: Implement this as well...
     }
 
     companion object {

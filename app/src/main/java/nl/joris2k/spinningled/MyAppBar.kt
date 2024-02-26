@@ -2,7 +2,6 @@ package nl.joris2k.spinningled
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
@@ -12,7 +11,7 @@ import androidx.navigation.NavHostController
 fun MyAppBar(title: String,
              navController: NavHostController,
              showBackButton: Boolean = true,
-             content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> kotlin.Unit
+             content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit
 ) {
     Scaffold(
         topBar = {
