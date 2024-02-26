@@ -1,5 +1,7 @@
 package nl.joris2k.spinningled.device
 
+import android.graphics.Bitmap
+import android.graphics.Color
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +15,7 @@ import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.AsynchronousSocketChannel
+import kotlin.math.min
 
 class SpinningLedDevice(
     private val hostname: String,
@@ -112,15 +115,15 @@ class SpinningLedDevice(
     }
 
     suspend fun sendDummy(length: Int) {
-        Timber.d("sendDummy(${length}) enter")
+        Timber.d("sendDummy(${length}) ")
         assert(length in 0..MAX_PAYLOAD_LENGTH);
+
         val buffer = ByteBuffer.allocate(length + 4).order(ByteOrder.LITTLE_ENDIAN)
         buffer.putShort(0u.toShort()) // type = DUMMY
         buffer.putShort(length.toUShort().toShort()) // payloadLength = length
         buffer.put(ByteArray(length) { 255u.toByte() })
         buffer.flip()
-        val written = socket?.write(buffer)
-        Timber.d("sendDummy(${length}) done with $written")
+        socket?.write(buffer)
     }
 
     suspend fun setProgram(program: Int) = withContext(coroutineScope.coroutineContext) {
@@ -130,11 +133,54 @@ class SpinningLedDevice(
         buffer.putShort(2)// payloadLength = 2
         buffer.putShort(program.toUShort().toShort())
         buffer.flip()
-        val written = socket?.write(buffer)
-        Timber.d("setProgram(${program}) done with $written")
+        socket?.write(buffer)
 
         // Get actual values back...
         sendDummy(DEFAULT_INFO_PAYLOAD_SIZE); // Get Info Packet...
+    }
+
+    suspend fun sendRgb565Column(column: Int, pixels: ShortArray) {
+        Timber.d("sendRgb565Column(${column}, ${pixels.size}px)")
+        require(pixels.size <= MAX_PAYLOAD_LENGTH / 2)
+
+        val buffer = ByteBuffer.allocate(4 + pixels.size * 2).order(ByteOrder.LITTLE_ENDIAN)
+        val sb = buffer.asShortBuffer()
+        sb.put((0x4000 + column).toShort()) // type = AXIS_PACKET_TYPE_PIXEL_DATA_START
+        sb.put((pixels.size * 2).toShort())
+        sb.put(pixels)
+        buffer.flip()
+        socket?.write(buffer)
+    }
+
+    suspend fun sendRgb565Bitmap(bitmap: Bitmap) {
+        val size = _screenSize.value
+        if (size.width == 0 || size.height == 0) {
+            return
+        }
+
+        // Assume same orientation in this algorithm
+
+        // Calculate srcDestRatio such that:
+        //   src = dst * ratio
+        //   hence: ratio = src / dst
+        val ratio = min(bitmap.width.toFloat() / size.width.toFloat(),
+            bitmap.height.toFloat() / size.height.toFloat())
+        val top = (bitmap.height.toFloat() - ratio * size.height.toFloat()) / 2
+        val left = (bitmap.width.toFloat() - ratio * size.width.toFloat()) / 2
+
+        // Can optimize with larger multi-column transfers...
+        //val columnsAtOnce = MAX_PAYLOAD_LENGTH / size.height / 2
+        var pixels = ShortArray(size.height)
+        for(column in 0..<size.width) {
+            val x = (left + column * ratio).toInt()
+            for(row in 0..<size.height) {
+                val p = bitmap.getPixel(x, (top + row * ratio).toInt())
+                pixels[row] = (((Color.red(p) / 8) shl 11) or
+                        ((Color.green(p) / 4) shl 5) or
+                        ((Color.blue(p) / 8))).toUShort().toShort()
+            }
+            sendRgb565Column(column, pixels)
+        }
     }
 
     suspend fun sendColumnData(column: Int, data: ByteArray) = withContext(coroutineScope.coroutineContext) {

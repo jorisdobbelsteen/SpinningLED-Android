@@ -1,6 +1,7 @@
 package nl.joris2k.spinningled
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -31,11 +32,11 @@ fun MyAppBar(title: String,
                 navigationIcon = { if (showBackButton) {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(
-                            imageVector = Icons.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
                     }
-                } else { null } }
+                } }
             )
         },
     ) { innerPadding ->

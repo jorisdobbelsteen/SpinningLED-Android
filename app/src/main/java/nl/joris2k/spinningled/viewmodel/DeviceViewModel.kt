@@ -1,5 +1,6 @@
 package nl.joris2k.spinningled.viewmodel
 
+import android.graphics.Bitmap
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -29,6 +30,14 @@ class DeviceViewModel @Inject constructor(
     val screenSize : StateFlow<IntSize> get() = spinningLedDevice.screenSize
 
     init {
+        reconnect()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+    }
+
+    fun reconnect() {
         viewModelScope.launch {
             try {
                 spinningLedDevice.connect()
@@ -40,7 +49,13 @@ class DeviceViewModel @Inject constructor(
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
+    fun sendBitmap(bitmap: Bitmap) {
+        viewModelScope.launch {
+            try {
+                spinningLedDevice.sendRgb565Bitmap(bitmap)
+            } catch (e: Exception) {
+
+            }
+        }
     }
 }
